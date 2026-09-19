@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>⚔️ رويال وار - حرب الدول</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#f5c542; --dark:#0a0f14; --panel:#111a22; --red:#e74c3c; --green:#2ecc71;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Cairo',sans-serif;background:var(--dark);color:#fff;overflow:hidden;height:100vh;user-select:none}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#16222e 0%,#0a0f14 70%);z-index:10}
+.hidden{display:none!important}
+h1.logo{font-size:clamp(32px,6vw,64px);font-weight:900;background:linear-gradient(180deg,var(--gold),#b8860b);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 40px rgba(245,197,66,.25);letter-spacing:1px}
+.subtitle{color:#8fa3b0;margin-top:4px;font-size:clamp(13px,2vw,18px)}
+.btn{background:linear-gradient(180deg,#f5c542,#c9941a);color:#1a1205;border:none;padding:12px 34px;font-family:inherit;font-weight:900;font-size:17px;border-radius:10px;cursor:pointer;margin:6px;box-shadow:0 4px 0 #8a6410,0 8px 20px rgba(0,0,0,.5);transition:transform .1s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #8a6410}
+.btn.red{background:linear-gradient(180deg,#e74c3c,#a93226);color:#fff;box-shadow:0 4px 0 #6e2019,0 8px 20px rgba(0,0,0,.5)}
+.btn.blue{background:linear-gradient(180deg,#3498db,#21618c);color:#fff;box-shadow:0 4px 0 #154360,0 8px 20px rgba(0,0,0,.5)}
+.btn.small{padding:6px 16px;font-size:14px}
+input[type=text],input[type=password]{background:#0d151c;border:2px solid #2c3e50;color:#fff;padding:12px 16px;border-radius:10px;font-family:inherit;font-size:17px;width:min(320px,80vw);text-align:center;outline:none}
+input:focus{border-color:var(--gold)}
+.card{background:var(--panel);border:1px solid #22303c;border-radius:16px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+/* ----- country & character grids ----- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;width:min(760px,92vw);max-height:52vh;overflow-y:auto;padding:6px}
+.pick{background:#0d151c;border:2px solid #22303c;border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;transition:.15s}
+.pick:hover{border-color:var(--gold);transform:scale(1.04)}
+.pick.sel{border-color:var(--gold);background:#1c2733;box-shadow:0 0 18px rgba(245,197,66,.3)}
+.pick .big{font-size:34px}
+.pick .nm{font-weight:700;font-size:14px;margin-top:4px}
+.pick .st{font-size:11px;color:#8fa3b0}
+/* ----- menu ----- */
+#menu-stats{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:14px 0}
+.stat{background:var(--panel);border:1px solid #22303c;border-radius:12px;padding:10px 20px;text-align:center;min-width:110px}
+.stat .v{color:var(--gold);font-weight:900;font-size:20px}
+.stat .l{font-size:12px;color:#8fa3b0}
+/* ----- lobby ----- */
+.slot{background:#0d151c;border:2px dashed #2c3e50;border-radius:12px;padding:16px;text-align:center;width:150px}
+.slot.full{border-style:solid;border-color:var(--green)}
+.slot .av{font-size:38px}
+#lobby-slots{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:16px 0}
+/* ----- game HUD ----- */
+#game-canvas{position:fixed;inset:0}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:20}
+.hudbox{position:absolute;background:rgba(10,15,20,.72);border:1px solid #22303c;border-radius:10px;padding:8px 14px;backdrop-filter:blur(4px)}
+#hp-wrap{bottom:18px;right:18px;width:240px}
+.bar{height:12px;background:#222;border-radius:6px;overflow:hidden;margin-top:4px}
+.bar>i{display:block;height:100%;border-radius:6px;transition:width .2s}
+#hp-bar>i{background:linear-gradient(90deg,#2ecc71,#27ae60)}
+#ammo{bottom:18px;left:18px;font-size:22px;font-weight:900;color:var(--gold)}
+#alive{top:14px;left:14px;font-weight:900;font-size:18px}
+#kills{top:14px;left:120px;font-weight:900;font-size:18px;color:var(--red)}
+#zone-timer{top:14px;right:14px;font-weight:900;color:#9b59b6}
+#crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:22px;color:rgba(255,255,255,.9);text-shadow:0 0 4px #000}
+#killfeed{position:absolute;top:60px;right:14px;display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+.kf{background:rgba(0,0,0,.6);border-radius:6px;padding:3px 10px;font-size:13px;animation:kfin .3s}
+@keyframes kfin{from{opacity:0;transform:translateX(20px)}to{opacity:1}}
+#minimap{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);border:2px solid #22303c;border-radius:10px;background:#0a0f14}
+#hitmark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:30px;color:var(--red);opacity:0;font-weight:900}
+/* ----- chat ----- */
+#chat{position:fixed;bottom:18px;left:18px;width:min(340px,60vw);z-index:30;display:flex;flex-direction:column;gap:6px}
+#chat-box{height:150px;overflow-y:auto;background:rgba(10,15,20,.75);border:1px solid #22303c;border-radius:10px;padding:8px;font-size:13px}
+#chat-box div{margin-bottom:3px;word-break:break-word}
+#chat-box .sys{color:var(--gold)}
+#chat-row{display:flex;gap:6px}
+#chat-row input{flex:1;padding:8px 12px;font-size:14px;width:auto;text-align:right}
+/* ----- modals ----- */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(3px)}
+.modal .card{width:min(560px,94vw);max-height:86vh;overflow-y:auto;text-align:center}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+th,td{padding:6px 4px;border-bottom:1px solid #22303c}
+th{color:var(--gold)}
+.badge{padding:2px 10px;border-radius:8px;font-size:11px;font-weight:700}
+.badge.ban{background:var(--red)} .badge.ok{background:var(--green)}
+.owner-mark{color:var(--gold);font-weight:900}
+/* ----- rotate overlay ----- */
+#rotate-overlay{position:fixed;inset:0;background:#05080b;z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+#rotate-overlay .phone{font-size:70px;animation:rot 1.6s infinite ease-in-out}
+@keyframes rot{0%,20%{transform:rotate(0)}50%,70%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@media (orientation:portrait){#rotate-overlay{display:flex}}
+#top-bar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;padding:8px 14px;z-index:15;background:linear-gradient(180deg,rgba(0,0,0,.6),transparent)}
+.pulse{animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+#loading-tips{color:#8fa3b0;margin-top:20px;font-size:14px}
+#dmg-vignette{position:fixed;inset:0;pointer-events:none;z-index:25;box-shadow:inset 0 0 120px rgba(231,76,60,0);transition:box-shadow .15s}
+#end-screen .big-emoji{font-size:80px}
+.rewards{color:var(--gold);font-weight:900;font-size:20px;margin:10px 0}
+</style>
+</head>
+<body>
+
+<!-- ======= ROTATE ======= -->
+<div id="rotate-overlay">
+  <div class="phone">📱</div>
+  <h2>لف الشاشة يا بطل!</h2>
+  <p style="color:#8fa3b0">اللعبة شغالة أفقي (لاندسكيب) بس</p>
+</div>
+
+<!-- ======= AUTH ======= -->
+<div class="screen" id="screen-auth">
+  <h1 class="logo">⚔️ رويال وار</h1>
+  <p class="subtitle">حرب الدول • باتل رويال 3D • 20 لاعب</p>
+  <div id="auth-new" style="text-align:center;margin-top:30px">
+    <p style="margin-bottom:12px">اكتب اسمك عشان تدخل ساحة المعركة</p>
+    <input type="text" id="inp-name" placeholder="اسمك في اللعبة" maxlength="16"><br><br>
+    <button class="btn" onclick="createPlayer()">دخول المعركة 🔥</button>
+  </div>
+  <div id="auth-return" class="hidden" style="text-align:center;margin-top:30px">
+    <p>أهلاً بعودتك يا <b id="ret-name" style="color:var(--gold)"></b>!</p>
+    <p style="color:#8fa3b0;font-size:14px">الأيدي بتاعك: <b id="ret-id"></b></p><br>
+    <button class="btn" onclick="enterMenu()">كمل اللعب ⚔️</button>
+    <button class="btn red small" onclick="logout()">حساب تاني 🔄</button>
+  </div>
+  <p id="auth-err" style="color:var(--red);margin-top:10px"></p>
+</div>
+
+<!-- ======= BANNED ======= -->
+<div class="screen hidden" id="screen-banned">
+  <h1 style="color:var(--red);font-size:50px">⛔ محظور</h1>
+  <p style="margin-top:10px;color:#8fa3b0">حسابك اتحظر من اللعبة.<br>لو ظنك ظلم كلم الإدارة.</p>
+</div>
+
+<!-- ======= SETUP (country + character) ======= -->
+<div class="screen hidden" id="screen-setup">
+  <h2 style="color:var(--gold)">🌍 اختار دولتك</h2>
+  <div class="grid" id="countries"></div>
+  <h2 style="color:var(--gold);margin-top:14px">🎭 اختار شخصيتك</h2>
+  <div class="grid" id="chars"></div>
+  <br><button class="btn" id="btn-setup-done" onclick="finishSetup()" disabled>ابدأ ⚔️</button>
+</div>
+
+<!-- ======= MENU ======= -->
+<div class="screen hidden" id="screen-menu">
+  <div id="top-bar">
+    <span>🪙 <b id="m-coins" style="color:var(--gold)">0</b></span>
+    <span style="font-size:13px;color:#8fa3b0">دولة: <b id="m-country"></b> • الأيدي: <b id="m-id" style="color:var(--gold)"></b></span>
+  </div>
+  <h1 class="logo" style="font-size:clamp(26px,4vw,44px)" id="m-welcome"></h1>
+  <div id="menu-stats">
+    <div class="stat"><div class="v" id="m-level">1</div><div class="l">المستوى</div></div>
+    <div class="stat"><div class="v" id="m-xp">0</div><div class="l">نقاط الخبرة</div></div>
+    <div class="stat"><div class="v" id="m-wins">0</div><div class="l">انتصارات 🏆</div></div>
+    <div class="stat"><div class="v" id="m-kills">0</div><div class="l">القضاء 🔫</div></div>
+  </div>
+  <div>
+    <button class="btn" onclick="openLobby()">🎮 العب (سولو / سكواد)</button><br>
+    <button class="btn blue" onclick="openChatGlobal()">💬 الشات العام</button>
+    <button class="btn red small" onclick="logout()">خروج 🚪</button>
+  </div>
+  <p style="margin-top:16px;color:#5c6f7c;font-size:12px">اكتب /admin في الشات للوحة التحكم • /owner للمالك</p>
+</div>
+
+<!-- ======= LOBBY ======= -->
+<div class="screen hidden" id="screen-lobby">
+  <h2 style="color:var(--gold)">⏳ الوبي - استنى الفريق</h2>
+  <p style="color:#8fa3b0">كود الغرفة: <b id="room-code" style="color:var(--gold);font-size:20px;letter-spacing:3px"></b> (ابعته لصحابك)</p>
+  <div id="lobby-slots"></div>
+  <div>
+    <button class="btn blue small" onclick="inviteFriend()">➕ دعوة صاحب</button>
+    <button class="btn small" id="btn-start" onclick="startMatch()">🚀 ابدأ الجيم</button>
+    <button class="btn red small" onclick="showScreen('screen-menu')">رجوع</button>
+  </div>
+  <div id="chat"></div>
+</div>
+
+<!-- ======= GAME ======= -->
+<div id="game-canvas" class="hidden"></div>
+<div id="hud" class="hidden">
+  <div class="hudbox" id="alive">👥 20</div>
+  <div class="hudbox" id="kills">💀 0</div>
+  <div class="hudbox" id="zone-timer">⏱️ --</div>
+  <div class="hudbox" id="hp-wrap">❤️ الصحة<div class="bar" id="hp-bar"><i style="width:100%"></i></div></div>
+  <div class="hudbox" id="ammo">🔫 30/30</div>
+  <div id="crosshair">+</div>
+  <div id="hitmark">✖</div>
+  <div id="killfeed"></div>
+  <canvas id="minimap" width="130" height="130"></canvas>
+  <div id="dmg-vignette"></div>
+  <div style="position:absolute;bottom:8px;right:50%;transform:translateX(50%);font-size:11px;color:#8fa3b0">WASD حركة • ماوس تصويب • كليك ضرب • R تلقيم • Shift جري</div>
+</div>
+
+<!-- ======= END ======= -->
+<div class="screen hidden" id="end-screen">
+  <div class="big-emoji" id="end-emoji">🏆</div>
+  <h1 id="end-title" style="color:var(--gold)"></h1>
+  <p id="end-sub" style="color:#8fa3b0"></p>
+  <div class="rewards" id="end-rewards"></div>
+  <button class="btn" onclick="backToMenu()">القائمة الرئيسية 🏠</button>
+  <button class="btn blue" onclick="openLobby()">جيم تاني 🔁</button>
+</div>
+
+<!-- ======= ADMIN / OWNER MODALS ======= -->
+<div class="modal hidden" id="modal-pass">
+  <div class="card">
+    <h2 id="pass-title" style="color:var(--gold)">🔐 لوحة التحكم</h2>
+    <p style="color:#8fa3b0;font-size:13px;margin:8px 0" id="pass-hint"></p>
+    <div id="pass-name-step">
+      <p>قول اسمك الحقيقي عشان نتأكد:</p><br>
+      <input type="text" id="inp-realname" placeholder="اسمك الحقيقي"><br><br>
+      <button class="btn small" onclick="checkRealName()">تأكيد ✅</button>
+    </div>
+    <div id="pass-pw-step" class="hidden">
+      <input type="password" id="inp-pass" placeholder="كلمة السر"><br><br>
+      <button class="btn small" onclick="checkPassword()">دخول 🔓</button>
+    </div>
+    <p id="pass-err" style="color:var(--red);font-size:13px;margin-top:8px"></p>
+    <br><button class="btn red small" onclick="closeModal('modal-pass')">إلغاء</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="modal-admin">
+  <div class="card">
+    <h2 style="color:var(--gold)">🛡️ لوحة الأدمن</h2>
+    <p style="color:#8fa3b0;font-size:12px;margin-top:6px">أوامر الشات: /ban [ايدي] • /unban [ايدي] • /kick [ايدي] • /coins [ايدي] [كمية]</p>
+    <table id="admin-table"></table>
+    <br><button class="btn red small" onclick="closeModal('modal-admin');sessionAdmin=false">قفل اللوحة 🔒</button>
+  </div>
+</div>
+
+<div class="modal hidden" id="modal-owner">
+  <div class="card">
+    <h2 style="color:var(--gold)">👑 لوحة المالك</h2>
+    <p style="color:#8fa3b0;font-size:12px;margin-top:6px">عندك كل الصلاحيات. الأيدي 1000001 محمي نهائياً.</p>
+    <table id="owner-table"></table>
+    <br><button class="btn red small" onclick="closeModal('modal-owner');sessionOwner=false">قفل اللوحة 🔒</button>
+  </div>
+</div>
+
+<div id="chat-menu-holder"></div>
+
+<script>
+/* =====================================================================
+   ROYAL WAR - حرب الدول | باتل رويال 3D
+===================================================================== */
+const ADMIN_NAMES = ['مازن احمد','مصطفي ماهر','مصطفي ماهرخلي'];
+const ADMIN_PW  = 'momowr0';
+const OWNER_PW  = 'mazenlazangg77';
+const FIRST_ID  = 1000001;
+
+const COUNTRIES = [
+  {n:'مصر',f:'🇪🇬',c:0xc0392b},{n:'السعودية',f:'🇸🇦',c:0x27ae60},{n:'الإمارات',f:'🇦🇪',c:0x2c3e50},
+  {n:'قطر',f:'🇶🇦',c:0x8e44ad},{n:'الكويت',f:'🇰🇼',c:0x16a085},{n:'أمريكا',f:'🇺🇸',c:0x2980b9},
+  {n:'روسيا',f:'🇷🇺',c:0xf1c40f},{n:'تركيا',f:'🇹🇷',c:0xe74c3c},{n:'ألمانيا',f:'🇩🇪',c:0xd35400},
+  {n:'فرنسا',f:'🇫🇷',c:0x3498db},{n:'البرازيل',f:'🇧🇷',c:0x2ecc71},{n:'اليابان',f:'🇯🇵',c:0xecf0f1}
+];
+const CHARS = [
+  {n:'صقر الصحراء',e:'🦅',hp:100,spd:1.0,dmg:14,desc:'متوازن'},
+  {n:'شبح الليل',e:'👻',hp:85,spd:1.25,dmg:12,desc:'سريع'},
+  {n:'درع الوطن',e:'🛡️',hp:140,spd:0.8,dmg:12,desc:'دبابة'},
+  {n:'إعصار',e:'🌪️',hp:95,spd:1.15,dmg:13,desc:'خفيف'},
+  {n:'قناص الموت',e:'🎯',hp:90,spd:0.95,dmg:20,desc:'ضرر عالي'}
+];
+const BOT_NAMES = ['أبو صقر','ذئب الشمال','ملك الحرب','النمر الأسود','صقر العرب','قناص الظلام','الفارس','برق','عاصفة','الشبح','رعد','السيف','الجبل','وحش','العقرب','الصقر','الذئب','ليث','عفريت'];
+const FRIENDS = ['كريم 🎮','عمر ⚡','يوسف 🐺','حسن 🔥','زياد 💪','تيمور 🎯'];
+
+/* ---------------- DB ---------------- */
+const DB = {
+  get(k,d){ try{ const v=localStorage.getItem('brw_'+k); return v===null?d:JSON.parse(v);}catch(e){return d} },
+  set(k,v){ localStorage.setItem('brw_'+k,JSON.stringify(v)); }
+};
+let registry = DB.get('registry',[]);
+let idCounter = DB.get('idCounter',FIRST_ID);
+let me = null;
+let sessionAdmin=false, sessionOwner=false;
+
+function saveAll(){ DB.set('registry',registry); DB.set('idCounter',idCounter); }
+function findPlayer(id){ return registry.find(p=>p.id===Number(id)); }
+
+/* ---------------- SCREENS ---------------- */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  if(id) document.getElementById(id).classList.remove('hidden');
+}
+function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
+
+/* ---------------- AUTH ---------------- */
+window.onload = ()=>{
+  const cid = DB.get('currentId',null);
+  if(cid){ const p=findPlayer(cid); if(p){ me=p; showReturn(); return; } }
+  showScreen('screen-auth');
+};
+function showReturn(){
+  showScreen('screen-auth');
+  document.getElementById('auth-new').classList.add('hidden');
+  document.getElementById('auth-return').classList.remove('hidden');
+  document.getElementById('ret-name').textContent = me.name;
+  document.getElementById('ret-id').textContent = me.id;
+}
+function createPlayer(){
+  const name = document.getElementById('inp-name').value.trim();
+  const err = document.getElementById('auth-err');
+  if(name.length<2){ err.textContent='الاسم لازم يكون حرفين على الأقل'; return; }
+  if(registry.find(p=>p.name===name)){ err.textContent='الاسم ده موجود، جرب اسم تاني'; return; }
+  me = { id:idCounter++, name, country:null, char:null, coins:1000, xp:0, level:1, wins:0, kills:0, banned:false, played:0 };
+  registry.push(me); saveAll();
+  DB.set('currentId',me.id);
+  renderSetup();
+}
+function enterMenu(){
+  if(me.banned){ showScreen('screen-banned'); return; }
+  DB.set('currentId',me.id);
+  showScreen('screen-menu'); refreshMenu();
+}
+function logout(){
+  DB.set('currentId',null); me=null;
+  document.getElementById('auth-return').classList.add('hidden');
+  document.getElementById('auth-new').classList.remove('hidden');
+  document.getElementById('inp-name').value='';
+  showScreen('screen-auth');
+}
+function refreshMenu(){
+  document.getElementById('m-welcome').textContent = 'أهلاً يا '+me.name+' 👋';
+  document.getElementById('m-coins').textContent = me.coins;
+  document.getElementById('m-level').textContent = me.level;
+  document.getElementById('m-xp').textContent = me.xp;
+  document.getElementById('m-wins').textContent = me.wins;
+  document.getElementById('m-kills').textContent = me.kills;
+  const c = COUNTRIES.find(x=>x.n===me.country);
+  document.getElementById('m-country').textContent = (c?c.f:'')+' '+(me.country||'—');
+  document.getElementById('m-id').textContent = me.id;
+}
+
+/* ---------------- SETUP ---------------- */
+let tmpCountry=null, tmpChar=null;
+function renderSetup(){
+  showScreen('screen-setup');
+  const cg=document.getElementById('countries'); cg.innerHTML='';
+  COUNTRIES.forEach(c=>{
+    const d=document.createElement('div'); d.className='pick';
+    d.innerHTML=`<div class="big">${c.f}</div><div class="nm">${c.n}</div>`;
+    d.onclick=()=>{ tmpCountry=c.n; [...cg.children].forEach(x=>x.classList.remove('sel')); d.classList.add('sel'); checkSetup(); };
+    cg.appendChild(d);
+  });
+  const chg=document.getElementById('chars'); chg.innerHTML='';
+  CHARS.forEach(c=>{
+    const d=document.createElement('div'); d.className='pick';
+    d.innerHTML=`<div class="big">${c.e}</div><div class="nm">${c.n}</div><div class="st">❤️${c.hp} ⚡${c.spd} 💥${c.dmg} — ${c.desc}</div>`;
+    d.onclick=()=>{ tmpChar=c.n; [...chg.children].forEach(x=>x.classList.remove('sel')); d.classList.add('sel'); checkSetup(); };
+    chg.appendChild(d);
+  });
+}
+function checkSetup(){ document.getElementById('btn-setup-done').disabled = !(tmpCountry&&tmpChar); }
+function finishSetup(){
+  me.country=tmpCountry; me.char=tmpChar; saveAll();
+  enterMenu();
+}
+
+/* ---------------- LOBBY ---------------- */
+let squad=[];
+function openLobby(){
+  if(me.banned){ showScreen('screen-banned'); return; }
+  showScreen('screen-lobby');
+  squad=[{name:me.name, me:true, country:me.country, char:me.char}];
+  document.getElementById('room-code').textContent = String(Math.floor(100000+Math.random()*899999));
+  renderLobby();
+  buildChat(document.getElementById('chat'));
+  addChatMsg('sys','🏟️ اتفتحت غرفة جديدة! ابعت الكود لصحابك يدخلوا معاك');
+}
+function renderLobby(){
+  const w=document.getElementById('lobby-slots'); w.innerHTML='';
+  for(let i=0;i<4;i++){
+    const s=squad[i];
+    const d=document.createElement('div'); d.className='slot'+(s?' full':'');
+    d.innerHTML = s ? `<div class="av">${s.me?'🫡':'🪖'}</div><b>${s.name}</b><br><small style="color:#8fa3b0">${s.country||''} • ${s.char||''}</small>`
+                    : `<div class="av">➕</div><small style="color:#5c6f7c">فاضي</small>`;
+    w.appendChild(d);
+  }
+}
+function inviteFriend(){
+  if(squad.length>=4){ addChatMsg('sys','الفريق كامل (4/4)'); return; }
+  const f=FRIENDS[Math.floor(Math.random()*FRIENDS.length)];
+  const c=COUNTRIES[Math.floor(Math.random()*COUNTRIES.length)];
+  const ch=CHARS[Math.floor(Math.random()*CHARS.length)];
+  squad.push({name:f, country:c.n, char:ch.n});
+  renderLobby();
+  addChatMsg('sys',`✅ ${f} قبل الدعوة ودخل الفريق! (${squad.length}/4)`);
+}
+
+/* =====================================================================
+   CHAT + ADMIN COMMANDS
+===================================================================== */
+let chatBuilt=false, chatTarget=null, fakeChatTimer=null;
+function buildChat(holder){
+  chatTarget=holder;
+  holder.innerHTML=`<div id="chat-box"></div>
+    <div id="chat-row"><input type="text" id="chat-inp" placeholder="اكتب رسالة أو أمر / ..."><button class="btn small" onclick="sendChat()">إرسال</button></div>`;
+  chatBuilt=true;
+  const inp=holder.querySelector('#chat-inp');
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') sendChat(); });
+  startFakeChat();
+}
+function openChatGlobal(){
+  showScreen('screen-menu');
+  const holder=document.getElementById('chat-menu-holder');
+  if(!holder.querySelector('#chat-box')){
+    holder.style.cssText='position:fixed;bottom:18px;left:18px;width:min(340px,60vw);z-index:30';
+    buildChat(holder);
+  } else holder.style.display='flex';
+  addChatMsg('sys','💬 أهلاً بالشات العام! اكتب /help للأوامر');
+}
+function addChatMsg(cls,txt){
+  const box = chatTarget ? chatTarget.querySelector('#chat-box') : null;
+  if(!box) return;
+  const d=document.createElement('div'); if(cls)d.className=cls; d.textContent=txt;
+  box.appendChild(d); box.scrollTop=box.scrollHeight;
+  while(box.children.length>40) box.removeChild(box.firstChild);
+}
+function startFakeChat(){
+  if(fakeChatTimer) clearInterval(fakeChatTimer);
+  const lines=['حد يدخل سكواد؟ 🔥','الجيم ده نار النهارده','يا جماعة الزون بيضغط بسرعة 😱','مين جرب شخصية القناص؟','انا واخد 3 كيلات ورا بعض 💪','good game يا أبطال','فيه حد عايز يتمرن قبل الرانكد؟'];
+  fakeChatTimer=setInterval(()=>{
+    if(Math.random()<0.55){
+      const n=BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)];
+      addChatMsg('', n+': '+lines[Math.floor(Math.random()*lines.length)]);
+    }
+  }, 5000);
+}
+function sendChat(){
+  const inp=chatTarget.querySelector('#chat-inp');
+  const t=inp.value.trim(); if(!t) return;
+  inp.value='';
+  if(t.startsWith('/')){ handleCommand(t); return; }
+  addChatMsg('', me.name+': '+t);
+}
+function handleCommand(t){
+  const parts=t.split(/\s+/); const cmd=parts[0].toLowerCase();
+  if(cmd==='/help'){
+    addChatMsg('sys','📜 الأوامر: /admin لوحة الأدمن • /owner لوحة المالك • /ban [ايدي] • /unban [ايدي] • /kick [ايدي] • /coins [ايدي] [كمية]');
+  }
+  else if(cmd==='/admin'){
+    passMode='admin';
+    document.getElementById('pass-title').textContent='🛡️ لوحة الأدمن';
+    document.getElementById('pass-hint').textContent='منطقة محمية - للمشرفين فقط';
+    document.getElementById('pass-name-step').classList.remove('hidden');
+    document.getElementById('pass-pw-step').classList.add('hidden');
+    document.getElementById('pass-err').textContent='';
+    document.getElementById('modal-pass').classList.remove('hidden');
+  }
+  else if(cmd==='/owner'){
+    passMode='owner';
+    document.getElementById('pass-title').textContent='👑 لوحة المالك';
+    document.getElementById('pass-hint').textContent='منطقة المالك - أعلى صلاحية';
+    document.getElementById('pass-name-step').classList.add('hidden');
+    document.getElementById('pass-pw-step').classList.remove('hidden');
+    document.getElementById('pass-err').textContent='';
+    document.getElementById('modal-pass').classList.remove('hidden');
+  }
+  else if(['/ban','/unban','/kick','/coins'].includes(cmd)){
+    if(!sessionAdmin && !sessionOwner){ addChatMsg('sys','❌ ممنوع! سجل دخولك كأدمن الأول (/admin)'); return; }
+    const id=Number(parts[1]);
+    const target=findPlayer(id);
+    if(!target){ addChatMsg('sys','❌ الأيدي ده مش موجود'); return; }
+    if(cmd==='/ban'){
+      if(id===FIRST_ID){ addChatMsg('sys','🛡️ الأيدي الأول (1000001) محمي ولا يمكن حظره أبداً!'); return; }
+      target.banned=true; saveAll(); addChatMsg('sys',`🔨 تم حظر ${target.name} (${id})`);
+      if(me.id===id){ forceKick(); }
+    }
+    else if(cmd==='/unban'){ target.banned=false; saveAll(); addChatMsg('sys',`✅ تم فك حظر ${target.name} (${id})`); }
+    else if(cmd==='/kick'){
+      if(id===FIRST_ID){ addChatMsg('sys','🛡️ ممنوع طرد الأيدي الأول!'); return; }
+      addChatMsg('sys',`👢 تم طرد ${target.name} (${id}) من الجيم`);
+      if(me.id===id) forceKick();
+    }
+    else if(cmd==='/coins'){
+      const amt=Number(parts[2]||0);
+      if(!amt||amt<0){ addChatMsg('sys','❌ اكتب الكمية: /coins ايدي كمية'); return; }
+      target.coins+=amt; saveAll();
+      addChatMsg('sys',`🪙 تمت إضافة ${amt} عملة لـ ${target.name} (${id})`);
+      if(me.id===id) refreshMenu();
+    }
+  }
+  else addChatMsg('sys','❌ أمر غير معروف. اكتب /help');
+}
+let passMode='admin';
+function checkRealName(){
+  const n=document.getElementById('inp-realname').value.trim();
+  if(ADMIN_NAMES.includes(n)){
+    document.getElementById('pass-name-step').classList.add('hidden');
+    document.getElementById('pass-pw-step').classList.remove('hidden');
+    document.getElementById('pass-err').textContent='';
+  } else document.getElementById('pass-err').textContent='❌ الاسم ده مش في قائمة المشرفين!';
+}
+function checkPassword(){
+  const p=document.getElementById('inp-pass').value;
+  const err=document.getElementById('pass-err');
+  if(passMode==='admin'){
+    if(p===ADMIN_PW){ sessionAdmin=true; closeModal('modal-pass'); openAdminPanel(); }
+    else err.textContent='❌ كلمة السر غلط!';
+  } else {
+    if(p===OWNER_PW){ sessionOwner=true; closeModal('modal-pass'); openOwnerPanel(); }
+    else err.textContent='❌ كلمة السر غلط!';
+  }
+}
+function renderTable(elId, isOwner){
+  const t=document.getElementById(elId);
+  let h='<tr><th>الأيدي</th><th>الاسم</th><th>الدولة</th><th>🪙</th><th>مستوى</th><th>الحالة</th><th>أوامر</th></tr>';
+  registry.forEach(p=>{
+    const isFirst = p.id===FIRST_ID;
+    h+=`<tr>
+      <td><b style="color:var(--gold)">${p.id}</b>${isFirst?' <span class="owner-mark">👑</span>':''}</td>
+      <td>${p.name}</td><td>${p.country||'—'}</td><td>${p.coins}</td><td>${p.level}</td>
+      <td>${p.banned?'<span class="badge ban">محظور</span>':'<span class="badge ok">نشط</span>'}</td>
+      <td>
+        ${isFirst ? '<small style="color:var(--gold)">محمي</small>' : `
+          <button class="btn small ${p.banned?'':'red'}" style="padding:2px 10px;font-size:11px" onclick="adminAct('${p.id}','${p.banned?'unban':'ban'}',${isOwner})">${p.banned?'فك الحظر':'حظر'}</button>
+          <button class="btn red small" style="padding:2px 10px;font-size:11px" onclick="adminAct('${p.id}','kick',${isOwner})">طرد</button>`}
+        <button class="btn small" style="padding:2px 10px;font-size:11px" onclick="adminAct('${p.id}','coins',${isOwner})">+🪙</button>
+      </td></tr>`;
+  });
+  t.innerHTML=h;
+}
+function openAdminPanel(){ renderTable('admin-table',false); document.getElementById('modal-admin').classList.remove('hidden'); }
+function openOwnerPanel(){ renderTable('owner-table',true); document.getElementById('modal-owner').classList.remove('hidden'); }
+function adminAct(id,act,isOwner){
+  const p=findPlayer(id); if(!p) return;
+  if(p.id===FIRST_ID && act!=='coins'){ alert('🛡️ الأيدي الأول محمي نهائياً!'); return; }
+  if(act==='ban'){ p.banned=true; if(me.id===p.id) forceKick(); }
+  if(act==='unban'){ p.banned=false; }
+  if(act==='kick'){ if(me.id===p.id) forceKick(); }
+  if(act==='coins'){ const a=Number(prompt('كم عملة تضيف لـ '+p.name+'؟','500')); if(a>0) p.coins+=a; }
+  saveAll();
+  renderTable(isOwner?'owner-table':'admin-table',isOwner);
+  if(me.id===p.id){ refreshMenu(); }
+}
+function forceKick(){
+  addChatMsg('sys','👢 تم طردك من الجيم من الإدارة!');
+  if(inGame){ exitToMenu('👢 تم طردك من الجيم'); }
+}
+
+/* =====================================================================
+   3D GAME ENGINE (Three.js)
+===================================================================== */
+let scene,camera,renderer,clock,inGame=false;
+let player,bots=[],obstacles=[],tracers=[],pickups=[];
+let hp,maxHp,kills,alive,yaw=0,pitch=0,ammo=30,reloading=false;
+let zone={center:new THREE.Vector3(0,0,0),radius:190,dmg:2,nextShrink:25,shrinking:false,shrinkT:0,phase:0};
+const keys={};
+let audioCtx=null;
+
+function beep(freq,dur,type='square',vol=0.05){
+  try{
+    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type=type; o.frequency.value=freq; g.gain.value=vol;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+function makeNameSprite(text,color='#fff'){
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=64;
+  const cx=cv.getContext('2d');
+  cx.font='bold 30px Cairo, Arial'; cx.textAlign='center';
+  cx.fillStyle='rgba(0,0,0,0.45)'; cx.fillRect(0,10,256,44);
+  cx.fillStyle=color; cx.fillText(text,128,42);
+  const tex=new THREE.CanvasTexture(cv);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false}));
+  sp.scale.set(2.4,0.6,1);
+  return sp;
+}
+
+function makeSoldier(color,name,isPlayer){
+  const g=new THREE.Group();
+  const bodyMat=new THREE.MeshStandardMaterial({color,roughness:.7});
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.42,1.1,10),bodyMat);
+  body.position.y=1.05; body.castShadow=true; g.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.28,12,10),new THREE.MeshStandardMaterial({color:0xd8a06a}));
+  head.position.y=1.85; head.castShadow=true; g.add(head);
+  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.32,12,8,0,Math.PI*2,0,Math.PI/2),new THREE.MeshStandardMaterial({color:0x2d3a2d}));
+  helmet.position.y=1.88; g.add(helmet);
+  const gun=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.12,0.9),new THREE.MeshStandardMaterial({color:0x1a1a1a}));
+  gun.position.set(0.35,1.25,0.45); g.add(gun);
+  // legs
+  const legMat=new THREE.MeshStandardMaterial({color:0x24303a});
+  [-0.18,0.18].forEach(x=>{
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.55,8),legMat);
+    leg.position.set(x,0.28,0); g.add(leg);
+  });
+  if(!isPlayer){
+    const tag=makeNameSprite(name,'#ffd77a'); tag.position.y=2.5; g.add(tag);
+    // health bar sprite
+    const hcv=document.createElement('canvas'); hcv.width=128; hcv.height=16;
+    const htex=new THREE.CanvasTexture(hcv);
+    const hsp=new THREE.Sprite(new THREE.SpriteMaterial({map:htex,depthTest:false}));
+    hsp.scale.set(1.6,0.2,1); hsp.position.y=2.2; g.add(hsp);
+    g.userData.hcv=hcv; g.userData.htex=htex;
+  }
+  g.userData.name=name;
+  return g;
+}
+function updateBotHpBar(b){
+  const cx=b.mesh.userData.hcv.getContext('2d');
+  cx.clearRect(0,0,128,16);
+  cx.fillStyle='#333'; cx.fillRect(0,0,128,16);
+  cx.fillStyle='#e74c3c'; cx.fillRect(0,0,128*Math.max(0,b.hp/b.maxHp),16);
+  b.mesh.userData.htex.needsUpdate=true;
+}
+
+function startMatch(){
+  if(me.banned){ showScreen('screen-banned'); return; }
+  document.getElementById('chat').style.display='none';
+  initGame();
+}
+
+function initGame(){
+  inGame=true;
+  showScreen(null);
+  document.getElementById('game-canvas').classList.remove('hidden');
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('end-screen').classList.add('hidden');
+  document.getElementById('killfeed').innerHTML='';
+
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x87b5d6);
+  scene.fog=new THREE.Fog(0x87b5d6,60,220);
+  camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,600);
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.shadowMap.enabled=true;
+  document.getElementById('game-canvas').innerHTML='';
+  document.getElementById('game-canvas').appendChild(renderer.domElement);
+  clock=new THREE.Clock();
+
+  // lights
+  scene.add(new THREE.HemisphereLight(0xcfe8ff,0x3a4a3a,0.9));
+  const sun=new THREE.DirectionalLight(0xfff2cc,1.1);
+  sun.position.set(60,100,30); sun.castShadow=true;
+  sun.shadow.mapSize.set(2048,2048);
+  sun.shadow.camera.left=-120; sun.shadow.camera.right=120;
+  sun.shadow.camera.top=120; sun.shadow.camera.bottom=-120;
+  scene.add(sun);
+
+  // ground
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(500,500),new THREE.MeshStandardMaterial({color:0x4a6b3a,roughness:1}));
+  ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+  const grid=new THREE.GridHelper(500,50,0x3a5530,0x425f36);
+  grid.position.y=0.02; scene.add(grid);
+
+  // obstacles: buildings & rocks & trees
+  obstacles=[];
+  for(let i=0;i<70;i++){
+    const x=(Math.random()-0.5)*420, z=(Math.random()-0.5)*420;
+    if(Math.abs(x)<12&&Math.abs(z)<12) continue;
+    const kind=Math.random();
+    let m;
+    if(kind<0.45){ // building
+      const w=6+Math.random()*10,h=5+Math.random()*14,d=6+Math.random()*10;
+      m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL(0.08,0.15,0.35+Math.random()*0.25)}));
+      m.position.set(x,h/2,z);
+    } else if(kind<0.75){ // tree
+      m=new THREE.Group();
+      const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,3,7),new THREE.MeshStandardMaterial({color:0x5d4024}));
+      trunk.position.y=1.5;
+      const top=new THREE.Mesh(new THREE.ConeGeometry(2.2,4.5,8),new THREE.MeshStandardMaterial({color:0x2d5a2d}));
+      top.position.y=5;
+      m.add(trunk,top); m.position.set(x,0,z);
+    } else { // rock
+      const s=1+Math.random()*2.5;
+      m=new THREE.Mesh(new THREE.DodecahedronGeometry(s),new THREE.MeshStandardMaterial({color:0x7d8489,flatShading:true}));
+      m.position.set(x,s*0.6,z);
+    }
+    m.traverse(o=>{ if(o.isMesh){o.castShadow=true;o.receiveShadow=true;} });
+    scene.add(m); obstacles.push(m);
+  }
+
+  // zone visual
+  zoneMesh=new THREE.Mesh(new THREE.CylinderGeometry(1,1,60,64,1,true),
+    new THREE.MeshBasicMaterial({color:0x9b59b6,transparent:true,opacity:0.18,side:THREE.DoubleSide,depthWrite:false}));
+  zoneMesh.position.y=30; scene.add(zoneMesh);
+  zoneLine=new THREE.Mesh(new THREE.TorusGeometry(1,0.3,8,80),new THREE.MeshBasicMaterial({color:0xb07cc6}));
+  zoneLine.rotation.x=Math.PI/2; zoneLine.position.y=0.3; scene.add(zoneLine);
+
+  // player
+  const cc=COUNTRIES.find(c=>c.n===me.country)||COUNTRIES[0];
+  const ch=CHARS.find(c=>c.n===me.char)||CHARS[0];
+  maxHp=ch.hp; hp=maxHp; kills=0; alive=20; ammo=30; yaw=0; pitch=0;
+  player=makeSoldier(cc.c,me.name,true);
+  player.position.set(0,0,0); scene.add(player);
+  playerChar=ch;
+
+  // bots
+  bots=[];
+  const shuffled=[...BOT_NAMES].sort(()=>Math.random()-0.5);
+  for(let i=0;i<19;i++){
+    const c=COUNTRIES[Math.floor(Math.random()*COUNTRIES.length)];
+    const mesh=makeSoldier(c.c,shuffled[i],false);
+    let bx,bz; do{ bx=(Math.random()-0.5)*360; bz=(Math.random()-0.5)*360; }while(Math.hypot(bx,bz)<25);
+    mesh.position.set(bx,0,bz); scene.add(mesh);
+    const b={mesh,name:shuffled[i],hp:100,maxHp:100,alive:true,target:new THREE.Vector3(bx,0,bz),fireT:1+Math.random(),wanderT:0,speed:3+Math.random()*2,country:c.n};
+    updateBotHpBar(b); bots.push(b);
+  }
+
+  // squadmates follow if any (visual only)
+  squadmates=[];
+  squad.slice(1).forEach((s,i)=>{
+    const sc=COUNTRIES.find(c=>c.n===s.country)||COUNTRIES[0];
+    const m=makeSoldier(sc.c,s.name,false);
+    m.position.set(2+i*1.5,0,2); scene.add(m);
+    const b={mesh:m,name:s.name,hp:150,maxHp:150,alive:true,fireT:2,speed:5,wanderT:0,target:new THREE.Vector3(),follow:true,country:s.country};
+    updateBotHpBar(b); bots.push(b); squadmates.push(b);
+  });
+
+  // zone state
+  zone.center.set(0,0,0); zone.radius=190; zone.dmg=2; zone.phase=0;
+  zone.nextShrink=20; zone.shrinking=false;
+  document.getElementById('dmg-vignette').style.boxShadow='inset 0 0 120px rgba(231,76,60,0)';
+
+  // pointer lock
+  renderer.domElement.addEventListener('click',()=>{ if(inGame) renderer.domElement.requestPointerLock(); });
+  document.addEventListener('mousemove',e=>{
+    if(document.pointerLockElement===renderer.domElement){
+      yaw-=e.movementX*0.0022; pitch=Math.max(-1.2,Math.min(1.2,pitch-e.movementY*0.0022));
+    }
+  });
+  document.addEventListener('mousedown',e=>{
+    if(document.pointerLockElement===renderer.domElement&&e.button===0) shoot();
+  });
+  document.addEventListener('keydown',e=>{
+    keys[e.code]=true;
+    if(e.code==='KeyR') reload();
+  });
+  document.addEventListener('keyup',e=>keys[e.code]=false);
+  window.onresize=()=>{
+    camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+  };
+
+  addFeed('🎮 الجيم بدأ! نزلت في ساحة '+me.country);
+  addFeed('🟣 الزون هيصغر خلال 20 ثانية - ابعد عن الحواف');
+  animate();
+}
+let zoneMesh,zoneLine,playerChar;
+
+function addFeed(t){
+  const kf=document.getElementById('killfeed');
+  const d=document.createElement('div'); d.className='kf'; d.textContent=t;
+  kf.appendChild(d);
+  while(kf.children.length>6) kf.removeChild(kf.firstChild);
+  setTimeout(()=>{ if(d.parentNode) d.style.opacity='0.4'; },6000);
+}
+
+function shoot(){
+  if(reloading||ammo<=0){ if(ammo<=0) reload(); return; }
+  ammo--; updateAmmoHUD(); beep(180,0.08,'square',0.08);
+  const dir=new THREE.Vector3(); camera.getWorldDirection(dir);
+  const ray=new THREE.Raycaster(camera.position.clone(),dir);
+  const targets=bots.filter(b=>b.alive).map(b=>b.mesh);
+  const hits=ray.intersectObjects([...targets,...obstacles],true);
+  let endPoint=camera.position.clone().add(dir.multiplyScalar(120));
+  if(hits.length){
+    endPoint=hits[0].point;
+    let obj=hits[0].object;
+    while(obj && !obj.userData.name) obj=obj.parent;
+    if(obj){
+      const b=bots.find(x=>x.mesh===obj&&x.alive);
+      if(b){
+        const dmg=playerChar.dmg+Math.floor(Math.random()*6);
+        b.hp-=dmg; updateBotHpBar(b);
+        showHitmark();
+        if(b.hp<=0) killBot(b,true);
+      }
+    }
+  }
+  // tracer
+  const start=player.position.clone().add(new THREE.Vector3(0,1.4,0));
+  const geo=new THREE.BufferGeometry().setFromPoints([start,endPoint]);
+  const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0xffe28a,transparent:true,opacity:0.9}));
+  scene.add(line); tracers.push({line,t:0.08});
+}
+function showHitmark(){
+  const h=document.getElementById('hitmark');
+  h.style.opacity='1'; setTimeout(()=>h.style.opacity='0',120);
+}
+function reload(){
+  if(reloading||ammo===30) return;
+  reloading=true; document.getElementById('ammo').textContent='⏳ بيلقم...'; beep(300,0.15,'sine');
+  setTimeout(()=>{ ammo=30; reloading=false; updateAmmoHUD(); beep(500,0.1,'sine'); },1600);
+}
+function updateAmmoHUD(){ document.getElementById('ammo').textContent='🔫 '+ammo+'/30'; }
+
+function killBot(b,byPlayer){
+  b.alive=false; alive--;
+  const vn=bots.filter(x=>x.alive&&x!==b)[0];
+  if(byPlayer){ kills++; addFeed('💀 '+me.name+' قضى على '+b.name); beep(700,0.2,'triangle',0.1); }
+  else if(vn&&Math.random()<0.7) addFeed('💀 '+vn.name+' قضى على '+b.name);
+  else addFeed('☠️ '+b.name+' مات في الزون');
+  b.mesh.visible=false;
+  updateHUDNums();
+  if(alive===1&&byPlayerLastAliveCheck()){ /* win handled in loop */ }
+}
+function byPlayerLastAliveCheck(){ return true; }
+
+function botShoot(b,dt){
+  b.fireT-=dt;
+  if(b.fireT>0) return;
+  b.fireT=0.9+Math.random()*1.2;
+  const dist=b.mesh.position.distanceTo(player.position);
+  if(dist>45) return;
+  // hit chance
+  const hitP=Math.max(0.15,0.55-dist/100);
+  beep(120,0.06,'square',0.03);
+  if(Math.random()<hitP){
+    const dmg=6+Math.random()*8;
+    hp-=dmg; hurtFx();
+    if(hp<=0){ playerDie(b.name); }
+  }
+}
+function hurtFx(){
+  document.getElementById('dmg-vignette').style.boxShadow='inset 0 0 120px rgba(231,76,60,0.8)';
+  setTimeout(()=>{ if(hp>0) document.getElementById('dmg-vignette').style.boxShadow='inset 0 0 120px rgba(231,76,60,0)'; },200);
+  document.querySelector('#hp-bar i').style.width=Math.max(0,hp/maxHp*100)+'%';
+}
+function playerDie(killerName){
+  if(!inGame) return;
+  addFeed('💀 '+killerName+' قضى عليك!');
+  endMatch(false,killerName);
+}
+function endMatch(won,killerName){
+  inGame=false;
+  document.exitPointerLock&&document.exitPointerLock();
+  const cReward = won? 800+kills*150 : 100+kills*50;
+  const xpReward = won? 300+kills*40 : 60+kills*20;
+  me.coins+=cReward; me.xp+=xpReward; me.kills+=kills; me.played++;
+  while(me.xp>=me.level*200){ me.xp-=me.level*200; me.level++; addFeed('🆙 مستوى جديد: '+me.level); }
+  if(won) me.wins++;
+  saveAll();
+  document.getElementById('game-canvas').classList.add('hidden');
+  document.getElementById('hud').classList.add('hidden');
+  showScreen('end-screen');
+  document.getElementById('end-emoji').textContent = won?'🏆':'💀';
+  document.getElementById('end-title').textContent = won?'الفوز للدولة! WINNER WINNER!':'اتقتلت يا بطل';
+  document.getElementById('end-sub').textContent = won?('آخر واحد واقف من '+alive+' لاعب - '+me.country+' فازت!'):('اللي قضى عليك: '+killerName);
+  document.getElementById('end-rewards').innerHTML = `🪙 +${cReward} عملة &nbsp;•&nbsp; ⭐ +${xpReward} خبرة &nbsp;•&nbsp; 💀 ${kills} قتلة`;
+  beep(won?880:150,0.5,won?'triangle':'sawtooth',0.12);
+}
+function backToMenu(){
+  showScreen('screen-menu'); refreshMenu();
+  document.getElementById('chat').style.display='flex';
+}
+function exitToMenu(msg){
+  inGame=false;
+  document.exitPointerLock&&document.exitPointerLock();
+  document.getElementById('game-canvas').classList.add('hidden');
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('chat').style.display='flex';
+  showScreen('screen-menu'); refreshMenu();
+  alert(msg);
+}
+
+function updateHUDNums(){
+  document.getElementById('alive').textContent='👥 '+alive;
+  document.getElementById('kills').textContent='💀 '+kills;
+}
+
+let minimapCtx=document.getElementById('minimap').getContext('2d');
+function drawMinimap(){
+  const s=130,half=250,scale=s/(half*2);
+  minimapCtx.fillStyle='#0a1410'; minimapCtx.fillRect(0,0,s,s);
+  // zone
+  minimapCtx.strokeStyle='#9b59b6'; minimapCtx.lineWidth=1.5;
+  minimapCtx.beginPath();
+  minimapCtx.arc(s/2-zone.center.x*scale, s/2-zone.center.z*scale, zone.radius*scale,0,7);
+  minimapCtx.stroke();
+  // player
+  minimapCtx.fillStyle='#f5c542';
+  minimapCtx.beginPath(); minimapCtx.arc(s/2-player.position.x*scale,s/2-player.position.z*scale,3.5,0,7); minimapCtx.fill();
+  // bots
+  minimapCtx.fillStyle='#e74c3c';
+  bots.forEach(b=>{ if(!b.alive)return;
+    minimapCtx.beginPath(); minimapCtx.arc(s/2-b.mesh.position.x*scale,s/2-b.mesh.position.z*scale,2,0,7); minimapCtx.fill();
+  });
+}
+
+function animate(){
+  if(!inGame){ return; }
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.05);
+  const t=clock.elapsedTime;
+
+  /* --- movement --- */
+  const ch=playerChar;
+  let mx=0,mz=0;
+  if(keys['KeyW']||keys['ArrowUp'])mz-=1;
+  if(keys['KeyS']||keys['ArrowDown'])mz+=1;
+  if(keys['KeyA']||keys['ArrowLeft'])mx-=1;
+  if(keys['KeyD']||keys['ArrowRight'])mx+=1;
+  const sprint=(keys['ShiftLeft']||keys['ShiftRight'])?1.7:1;
+  const spd=7*ch.spd*sprint;
+  if(mx||mz){
+    const len=Math.hypot(mx,mz); mx/=len; mz/=len;
+    const sin=Math.sin(yaw),cos=Math.cos(yaw);
+    player.position.x+=(mx*cos - mz*sin)*spd*dt;
+    player.position.z+=(mx*sin + mz*cos)*spd*dt;
+  }
+  player.position.x=Math.max(-245,Math.min(245,player.position.x));
+  player.position.z=Math.max(-245,Math.min(245,player.position.z));
+  player.rotation.y=yaw+Math.PI;
+
+  /* --- camera --- */
+  const camDist=6,camH=3.2;
+  const cx=player.position.x+Math.sin(yaw)*camDist*Math.cos(pitch);
+  const cz=player.position.z+Math.cos(yaw)*camDist*Math.cos(pitch);
+  const cy=player.position.y+camH+Math.sin(pitch)*camDist;
+  camera.position.set(cx,Math.max(0.6,cy),cz);
+  camera.lookAt(player.position.x,player.position.y+1.6,player.position.z);
+
+  /* --- bots AI --- */
+  bots.forEach(b=>{
+    if(!b.alive) return;
+    const bp=b.mesh.position;
+    const distToPlayer=bp.distanceTo(player.position);
+    if(b.follow){
+      // squadmate follows player
+      const off=new THREE.Vector3(Math.sin(b.mesh.id)*2.5,0,Math.cos(b.mesh.id)*2.5);
+      b.target.copy(player.position).add(off);
+      b.speed=8;
+      // squadmate shoots nearby enemies
+      let nearest=null,nd=30;
+      bots.forEach(e=>{ if(e.alive&&!e.follow){ const d=bp.distanceTo(e.mesh.position); if(d<nd){nd=d;nearest=e;} }});
+      if(nearest){ b.fireT-=dt; if(b.fireT<=0){ b.fireT=1; nearest.hp-=25; updateBotHpBar(nearest); if(nearest.hp<=0) killBot(nearest,false); } }
+    } else {
+      b.wanderT-=dt;
+      const outsideZone=Math.hypot(bp.x-zone.center.x,bp.z-zone.center.z)>zone.radius*0.85;
+      if(b.wanderT<=0||outsideZone){
+        if(outsideZone){
+          const ang=Math.random()*Math.PI*2, r=Math.random()*zone.radius*0.7;
+          b.target.set(zone.center.x+Math.cos(ang)*r,0,zone.center.z+Math.sin(ang)*r);
+        } else {
+          b.target.set(bp.x+(Math.random()-0.5)*60,0,bp.z+(Math.random()-0.5)*60);
+        }
+        b.wanderT=4+Math.random()*4;
+      }
+      if(distToPlayer<42 && Math.random()<0.7) botShoot(b,dt);
+      else b.fireT=Math.max(b.fireT,0.5);
+    }
+    // move toward target
+    const dirv=new THREE.Vector3(b.target.x-bp.x,0,b.target.z-bp.z);
+    if(dirv.length()>1.5){
+      dirv.normalize();
+      bp.add(dirv.multiplyScalar(b.speed*dt));
+      b.mesh.rotation.y=Math.atan2(dirv.x,dirv.z);
+    }
+    // zone damage to bots
+    if(Math.hypot(bp.x-zone.center.x,bp.z-zone.center.z)>zone.radius){
+      b.hp-=zone.dmg*dt*3;
+      if(b.hp<=0) killBot(b,false);
+      else if(Math.random()<dt*2) updateBotHpBar(b);
+    }
+  });
+
+  /* --- bot vs bot events (realistic killfeed) --- */
+  if(Math.random()<dt*0.25){
+    const aliveBots=bots.filter(b=>b.alive&&!b.follow);
+    if(aliveBots.length>2){
+      const a=aliveBots[Math.floor(Math.random()*aliveBots.length)];
+      const others=aliveBots.filter(x=>x!==a);
+      const v=others[Math.floor(Math.random()*others.length)];
+      v.hp-=40; updateBotHpBar(v);
+      if(v.hp<=0) killBot(v,false);
+    }
+  }
+
+  /* --- zone logic --- */
+  if(!zone.shrinking){
+    zone.nextShrink-=dt;
+    document.getElementById('zone-timer').textContent='⏱️ الزون هيصغر: '+Math.max(0,Math.ceil(zone.nextShrink))+'ث';
+    if(zone.nextShrink<=0){
+      zone.shrinking=true; zone.shrinkT=25;
+      zone.targetRadius=Math.max(14,zone.radius*0.55);
+      zone.targetCenter=zone.center.clone().add(new THREE.Vector3((Math.random()-0.5)*40,0,(Math.random()-0.5)*40));
+      addFeed('🟣 الزون بيصغر دلوقتي! اجري للنص');
+      beep(220,0.4,'sine',0.1);
+    }
+  } else {
+    zone.shrinkT-=dt;
+    const k=1-Math.max(0,zone.shrinkT)/25;
+    zone.radius=zone.radius+(zone.targetRadius-zone.radius)*dt*0.8;
+    zone.center.lerp(zone.targetCenter,dt*0.4);
+    document.getElementById('zone-timer').textContent='⚠️ الزون بيصغر!';
+    if(zone.shrinkT<=0){
+      zone.shrinking=false; zone.phase++;
+      zone.nextShrink=Math.max(10,22-zone.phase*3);
+      zone.dmg=2+zone.phase*2;
+    }
+  }
+  zoneMesh.position.x=zone.center.x; zoneMesh.position.z=zone.center.z;
+  zoneMesh.scale.set(zone.radius,1,zone.radius);
+  zoneLine.position.x=zone.center.x; zoneLine.position.z=zone.center.z;
+  zoneLine.scale.set(zone.radius,zone.radius,1);
+
+  /* --- zone damage to player --- */
+  if(Math.hypot(player.position.x-zone.center.x,player.position.z-zone.center.z)>zone.radius){
+    hp-=zone.dmg*dt;
+    document.getElementById('dmg-vignette').style.boxShadow='inset 0 0 120px rgba(155,89,182,0.6)';
+    document.querySelector('#hp-bar i').style.width=Math.max(0,hp/maxHp*100)+'%';
+    if(hp<=0) playerDie('الزون 🟣');
+  }
+
+  /* --- tracers --- */
+  for(let i=tracers.length-1;i>=0;i--){
+    tracers[i].t-=dt;
+    tracers[i].line.material.opacity=Math.max(0,tracers[i].t/0.08);
+    if(tracers[i].t<=0){ scene.remove(tracers[i].line); tracers.splice(i,1); }
+  }
+
+  /* --- win check --- */
+  const aliveEnemies=bots.filter(b=>b.alive&&!b.follow).length;
+  if(aliveEnemies===0&&inGame){ alive=1; updateHUDNums(); endMatch(true,null); return; }
+
+  drawMinimap();
+  renderer.render(scene,camera);
+}
+</script>
+</body>
+</html>
